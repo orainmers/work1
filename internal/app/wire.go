@@ -20,6 +20,7 @@ import (
 	"github.com/krisch/crm-backend/internal/health"
 	"github.com/krisch/crm-backend/internal/helpers"
 	"github.com/krisch/crm-backend/internal/jwt"
+	"github.com/krisch/crm-backend/internal/legalentities"
 	"github.com/krisch/crm-backend/internal/logs"
 	"github.com/krisch/crm-backend/internal/notifications"
 	"github.com/krisch/crm-backend/internal/permissions"
@@ -61,6 +62,7 @@ func InitApp(name string, creds postgres.Creds, metrics bool, rc redis.Creds) (*
 	wire.Build(
 		configs.NewConfigsFromEnv,
 		postgres.NewGDB,
+		postgres.ProvideGormDB,
 		redis.New,
 
 		health.NewHealthService,
@@ -130,6 +132,10 @@ func InitApp(name string, creds postgres.Creds, metrics bool, rc redis.Creds) (*
 		catalogs.NewRepository,
 		catalogs.New,
 
+		// Подключаем репозиторий и сервис для legalentities
+		legalentities.NewRepository,
+		legalentities.NewService,
+
 		NewApp,
 	)
 
@@ -140,13 +146,19 @@ func Configs() *configs.Configs {
 	return &configs.Configs{}
 }
 
-func NewApp(name string, conf *configs.Configs, gdb *postgres.GDB, rds *redis.RDS,
+func NewApp(
+	name string,
+	conf *configs.Configs,
+	gdb *postgres.GDB,
+	rds *redis.RDS,
+
 	healthService *health.Service,
 	notificationsService *notifications.Service,
 	logService logs.ILogService,
 	profileService *profile.Service,
 	emailService emails.IEmailsService,
 	federationService *federation.Service,
+	legalEntitiesService *legalentities.Service,
 	taskService *task.Service,
 	commentService *comments.Service,
 	dictionaryService *dictionary.Service,
@@ -206,6 +218,7 @@ func NewApp(name string, conf *configs.Configs, gdb *postgres.GDB, rds *redis.RD
 	w.SMSService = smsService
 	w.AgentsService = agentsService
 	w.PermissionsService = permissionsService
+	w.LegalEntitiesService = legalEntitiesService
 
 	return w
 }

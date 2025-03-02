@@ -22,6 +22,7 @@ import (
 	"github.com/krisch/crm-backend/internal/health"
 	"github.com/krisch/crm-backend/internal/helpers"
 	"github.com/krisch/crm-backend/internal/jwt"
+	"github.com/krisch/crm-backend/internal/legalentities"
 	"github.com/krisch/crm-backend/internal/logs"
 	"github.com/krisch/crm-backend/internal/notifications"
 	"github.com/krisch/crm-backend/internal/permissions"
@@ -81,6 +82,9 @@ func InitApp(name string, creds postgres.Creds, metrics bool, rc redis.Creds) (*
 	if err != nil {
 		return nil, err
 	}
+	db := postgres.ProvideGormDB(gdb)
+	legalentitiesRepository := legalentities.NewRepository(db)
+	legalentitiesService := legalentities.NewService(legalentitiesRepository)
 	gatesRepository := gates.NewRepository(gdb, rds)
 	gatesService := gates.New(gatesRepository, dictionaryService)
 	companyRepository := company.NewRepository(gdb, rds, cacheService)
@@ -91,7 +95,7 @@ func InitApp(name string, creds postgres.Creds, metrics bool, rc redis.Creds) (*
 	agentsService := agents.New(agentsRepository)
 	permissionsRepository := permissions.NewRepository(gdb, rds)
 	permissionsService := permissions.New(permissionsRepository)
-	app := NewApp(name, configsConfigs, gdb, rds, service, notificationsService, iLogService, profileService, iEmailsService, federationService, taskService, commentsService, dictionaryService, s3Service, servicePrivate, gatesService, cacheService, metricsCounters, remindersService, catalogsService, aggregatesService, companyService, smsService, agentsService, permissionsService)
+	app := NewApp(name, configsConfigs, gdb, rds, service, notificationsService, iLogService, profileService, iEmailsService, federationService, legalentitiesService, taskService, commentsService, dictionaryService, s3Service, servicePrivate, gatesService, cacheService, metricsCounters, remindersService, catalogsService, aggregatesService, companyService, smsService, agentsService, permissionsService)
 	return app, nil
 }
 
@@ -126,13 +130,19 @@ func Configs() *configs.Configs {
 	return &configs.Configs{}
 }
 
-func NewApp(name string, conf *configs.Configs, gdb *postgres.GDB, rds *redis.RDS,
+func NewApp(
+	name string,
+	conf *configs.Configs,
+	gdb *postgres.GDB,
+	rds *redis.RDS,
+
 	healthService *health.Service,
 	notificationsService *notifications.Service,
 	logService logs.ILogService,
 	profileService *profile.Service,
 	emailService emails.IEmailsService,
 	federationService *federation.Service,
+	legalEntitiesService *legalentities.Service,
 	taskService *task.Service,
 	commentService *comments.Service,
 	dictionaryService *dictionary.Service,
@@ -190,6 +200,7 @@ func NewApp(name string, conf *configs.Configs, gdb *postgres.GDB, rds *redis.RD
 	w.SMSService = smsService
 	w.AgentsService = agentsService
 	w.PermissionsService = permissionsService
+	w.LegalEntitiesService = legalEntitiesService
 
 	return w
 }

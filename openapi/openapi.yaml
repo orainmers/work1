@@ -25,6 +25,75 @@ tags:
     description: Tasks
 
 paths:
+  /legal-entities:
+    get:
+      tags:
+        - federation
+      summary: Get all legal entities
+      operationId: getAllLegalEntities
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LegalEntityDTO'
+    post:
+      tags:
+        - federation
+      summary: Create new legal entity
+      operationId: createLegalEntity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLegalEntityRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalEntityDTO'
+
+  /legal-entities/{uuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags:
+        - federation
+      summary: Delete a legal entity
+      operationId: deleteLegalEntity
+      responses:
+        '204':
+          description: No Content
+    put:
+      tags:
+        - federation
+      summary: Update a legal entity
+      operationId: updateLegalEntity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLegalEntityRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalEntityDTO'
+
   /about:
     get:
       tags:
@@ -3400,6 +3469,41 @@ components:
           validate: "uuid"
 
   schemas:
+    LegalEntityDTO:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateLegalEntityRequest:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    UpdateLegalEntityRequest:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+        
     NameRequest:
       type: object
       required:
