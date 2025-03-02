@@ -15,6 +15,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/oapi-codegen/runtime/types"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -27,6 +28,7 @@ import (
 	"github.com/krisch/crm-backend/internal/app"
 	"github.com/krisch/crm-backend/internal/configs"
 	"github.com/krisch/crm-backend/internal/helpers"
+	"github.com/krisch/crm-backend/internal/web/ofederation"
 	"github.com/krisch/crm-backend/pkg/redis"
 
 	validator "github.com/go-playground/validator/v10"
@@ -44,6 +46,72 @@ type Web struct {
 	Version   string
 	Tag       string
 	BuildTime string
+}
+
+// CreateLegalEntity implements ofederation.StrictServerInterface.
+func (a *Web) CreateLegalEntity(ctx context.Context, request ofederation.CreateLegalEntityRequestObject) (ofederation.CreateLegalEntityResponseObject, error) {
+	name := request.Body.Name
+	newID, err := a.app.LegalEntitiesService.CreateLegalEntity(ctx, name)
+	if err != nil {
+		return nil, echo.NewHTTPError(409, err.Error())
+	}
+	uuidValue := types.UUID(newID) // Приведение UUID к ожидаемому типу
+	namePtr := &name               // Приведение string к *string
+	return &ofederation.CreateLegalEntity201JSONResponse{
+		Uuid: &uuidValue,
+		Name: namePtr,
+	}, nil
+}
+
+// DeleteLegalEntity implements ofederation.StrictServerInterface.
+func (a *Web) DeleteLegalEntity(ctx context.Context, request ofederation.DeleteLegalEntityRequestObject) (ofederation.DeleteLegalEntityResponseObject, error) {
+	entID := request.Uuid
+	err := a.app.LegalEntitiesService.DeleteLegalEntity(ctx, uuid.UUID(entID))
+	if err != nil {
+		return nil, echo.NewHTTPError(404, err.Error())
+	}
+	return &ofederation.DeleteLegalEntity204Response{}, nil
+}
+
+// GetAllLegalEntities implements ofederation.StrictServerInterface.
+func (a *Web) GetAllLegalEntities(ctx context.Context, request ofederation.GetAllLegalEntitiesRequestObject) (ofederation.GetAllLegalEntitiesResponseObject, error) {
+	entities, err := a.app.LegalEntitiesService.GetAllLegalEntities(ctx)
+	if err != nil {
+		return nil, echo.NewHTTPError(500, err.Error())
+	}
+	dtos := make([]ofederation.LegalEntityDTO, 0, len(entities))
+	for _, e := range entities {
+		eUUID := types.UUID(e.UUID)
+		name := e.Name
+		namePtr := &name // Приведение string к *string
+		created := e.CreatedAt
+		updated := e.UpdatedAt
+		deleted := e.DeletedAt
+		dtos = append(dtos, ofederation.LegalEntityDTO{
+			Uuid:      &eUUID,
+			Name:      namePtr,
+			CreatedAt: &created,
+			UpdatedAt: &updated,
+			DeletedAt: deleted,
+		})
+	}
+	return ofederation.GetAllLegalEntities200JSONResponse(dtos), nil
+}
+
+// UpdateLegalEntity implements ofederation.StrictServerInterface.
+func (a *Web) UpdateLegalEntity(ctx context.Context, request ofederation.UpdateLegalEntityRequestObject) (ofederation.UpdateLegalEntityResponseObject, error) {
+	entID := request.Uuid
+	newName := request.Body.Name
+	err := a.app.LegalEntitiesService.UpdateLegalEntity(ctx, uuid.UUID(entID), newName)
+	if err != nil {
+		return nil, echo.NewHTTPError(400, err.Error())
+	}
+	uuidValue := types.UUID(entID)
+	newNamePtr := &newName // Приведение string к *string
+	return &ofederation.UpdateLegalEntity200JSONResponse{
+		Uuid: &uuidValue,
+		Name: newNamePtr,
+	}, nil
 }
 
 func NewWeb(conf configs.Configs) *Web {

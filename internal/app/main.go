@@ -20,6 +20,7 @@ import (
 	"github.com/krisch/crm-backend/internal/health"
 	"github.com/krisch/crm-backend/internal/helpers"
 	"github.com/krisch/crm-backend/internal/jwt"
+	"github.com/krisch/crm-backend/internal/legalentities"
 	"github.com/krisch/crm-backend/internal/logs"
 	"github.com/krisch/crm-backend/internal/notifications"
 	"github.com/krisch/crm-backend/internal/permissions"
@@ -61,6 +62,7 @@ type App struct {
 	JWT                  jwt.IJWT
 	AgentsService        *agents.Service
 	PermissionsService   *permissions.Service
+	LegalEntitiesService *legalentities.Service
 
 	MetricsCounters *helpers.MetricsCounters
 }

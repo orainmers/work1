@@ -54,6 +54,10 @@ func NewGDB(creds Creds, metrics bool) (*GDB, error) {
 	return &GDB{DB: db}, nil
 }
 
+func ProvideGormDB(gdb *GDB) *gorm.DB {
+	return gdb.DB
+}
+
 type GormLogger struct {
 	SlowThreshold         time.Duration
 	SourceField           string
