@@ -81,18 +81,10 @@ func (a *Web) GetAllLegalEntities(ctx context.Context, request ofederation.GetAl
 	}
 	dtos := make([]ofederation.LegalEntityDTO, 0, len(entities))
 	for _, e := range entities {
-		eUUID := types.UUID(e.UUID)
-		name := e.Name
-		namePtr := &name // Приведение string к *string
-		created := e.CreatedAt
-		updated := e.UpdatedAt
-		deleted := e.DeletedAt
 		dtos = append(dtos, ofederation.LegalEntityDTO{
-			Uuid:      &eUUID,
-			Name:      namePtr,
-			CreatedAt: &created,
-			UpdatedAt: &updated,
-			DeletedAt: deleted,
+			Uuid: &e.UUID,
+			Name: &e.Name,
+			// Исключаем deleted_at
 		})
 	}
 	return ofederation.GetAllLegalEntities200JSONResponse(dtos), nil
@@ -111,6 +103,7 @@ func (a *Web) UpdateLegalEntity(ctx context.Context, request ofederation.UpdateL
 	return &ofederation.UpdateLegalEntity200JSONResponse{
 		Uuid: &uuidValue,
 		Name: newNamePtr,
+		// Исключаем deleted_at
 	}, nil
 }
 

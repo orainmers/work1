@@ -109,7 +109,7 @@ type InviteDTO = dto.InviteDTO
 // LegalEntityDTO defines model for LegalEntityDTO.
 type LegalEntityDTO struct {
 	CreatedAt *time.Time          `json:"created_at,omitempty"`
-	DeletedAt *time.Time          `json:"deleted_at"`
+	DeletedAt *time.Time          `json:"deleted_at,omitempty"`
 	Name      *string             `json:"name,omitempty"`
 	UpdatedAt *time.Time          `json:"updated_at,omitempty"`
 	Uuid      *openapi_types.UUID `json:"uuid,omitempty"`

@@ -3486,7 +3486,6 @@ components:
         deleted_at:
           type: string
           format: date-time
-          nullable: true
 
     CreateLegalEntityRequest:
       type: object
