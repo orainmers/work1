@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,22 +12,4 @@ type LegalEntity struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt *time.Time
-}
-
-func (l *LegalEntity) ChangeName(name string) error {
-	if len(name) < 1 || len(name) > 100 {
-		return errors.New("название от 1 до 100 символов")
-	}
-
-	l.Name = name
-
-	return nil
-}
-
-func NewLegalEntityUUID(uid uuid.UUID) *LegalEntity {
-	legalentity := &LegalEntity{
-		UUID: uid,
-	}
-
-	return legalentity
 }
