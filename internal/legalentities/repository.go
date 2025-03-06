@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/krisch/crm-backend/domain" // Импортируй пакет с доменной моделью
 	"gorm.io/gorm"
 )
 
@@ -19,13 +20,13 @@ func NewRepository(db *gorm.DB) *Repository {
 }
 
 // Create добавляет новую сущность LegalEntity в БД.
-func (r *Repository) Create(ctx context.Context, entity *LegalEntity) error {
+func (r *Repository) Create(ctx context.Context, entity *domain.LegalEntity) error {
 	return r.db.WithContext(ctx).Create(entity).Error
 }
 
 // GetByUUID возвращает LegalEntity по его UUID.
-func (r *Repository) GetByUUID(ctx context.Context, id uuid.UUID) (LegalEntity, error) {
-	var entity LegalEntity
+func (r *Repository) GetByUUID(ctx context.Context, id uuid.UUID) (domain.LegalEntity, error) {
+	var entity domain.LegalEntity
 	err := r.db.WithContext(ctx).
 		Where("uuid = ?", id).
 		First(&entity).Error
@@ -33,8 +34,8 @@ func (r *Repository) GetByUUID(ctx context.Context, id uuid.UUID) (LegalEntity, 
 }
 
 // GetAll возвращает все LegalEntity, у которых нет метки удалённости (deleted_at).
-func (r *Repository) GetAll(ctx context.Context) ([]LegalEntity, error) {
-	var entities []LegalEntity
+func (r *Repository) GetAll(ctx context.Context) ([]domain.LegalEntity, error) {
+	var entities []domain.LegalEntity
 	err := r.db.WithContext(ctx).
 		Where("deleted_at IS NULL").
 		Find(&entities).Error
@@ -42,17 +43,21 @@ func (r *Repository) GetAll(ctx context.Context) ([]LegalEntity, error) {
 }
 
 // Update обновляет существующую запись LegalEntity.
-func (r *Repository) Update(ctx context.Context, entity *LegalEntity) error {
-	// Если вам нужно полностью перезаписать все поля, можно использовать сохранение.
-	// Если только отдельные поля, используйте Updates или конкретно UpdateColumn.
-	return r.db.WithContext(ctx).Save(entity).Error
+func (r *Repository) Update(ctx context.Context, entity *domain.LegalEntity) error {
+	return r.db.WithContext(ctx).
+		Model(&domain.LegalEntity{}).   // Указываем модель
+		Where("uuid = ?", entity.UUID). // Условие для поиска по UUID
+		Updates(map[string]interface{}{
+			"name":       entity.Name,
+			"updated_at": entity.UpdatedAt,
+		}).Error
 }
 
 // Delete помечает LegalEntity как удалённую (soft delete), устанавливая deleted_at.
 func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	result := r.db.WithContext(ctx).
-		Model(&LegalEntity{}).
+		Model(&domain.LegalEntity{}).
 		Where("uuid = ?", id).
 		Where("deleted_at IS NULL").
 		Update("deleted_at", &now)
