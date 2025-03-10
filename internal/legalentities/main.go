@@ -8,7 +8,7 @@ import (
 	"github.com/krisch/crm-backend/domain" // Импортируем доменную модель
 )
 
-// Service содержит бизнес-логику для работы с LegalEntity.
+// Service содержит бизнес-логику для работы с LegalEntity и BankAccount.
 type Service struct {
 	repo *Repository
 }
@@ -65,4 +65,36 @@ func (s *Service) UpdateLegalEntity(ctx context.Context, id uuid.UUID, newName s
 // DeleteLegalEntity «мягко» удаляет LegalEntity (soft delete).
 func (s *Service) DeleteLegalEntity(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
+}
+
+// GetAllBankAccounts возвращает все банковские аккаунты, связанные с юридическим лицом.
+func (s *Service) GetAllBankAccounts(ctx context.Context, legalEntityUUID uuid.UUID) ([]domain.BankAccount, error) {
+	// Получаем все банковские аккаунты для юридического лица
+	return s.repo.GetAllBankAccounts(ctx, legalEntityUUID)
+}
+
+// CreateBankAccount создаёт новый банковский аккаунт для юридического лица.
+func (s *Service) CreateBankAccount(ctx context.Context, bankAccount *domain.BankAccount) (uuid.UUID, error) {
+	// Генерируем новый UUID для банковского аккаунта
+	bankAccount.UUID = uuid.New()
+	bankAccount.CreatedAt = time.Now()
+	bankAccount.UpdatedAt = time.Now()
+
+	// Передаем доменную модель банковского аккаунта в репозиторий
+	err := s.repo.CreateBankAccount(ctx, bankAccount)
+	return bankAccount.UUID, err
+}
+
+// DeleteBankAccount «мягко» удаляет банковский аккаунт (soft delete).
+func (s *Service) DeleteBankAccount(ctx context.Context, bankAccountUUID uuid.UUID) error {
+	return s.repo.DeleteBankAccount(ctx, bankAccountUUID)
+}
+
+// UpdateBankAccount обновляет банковский аккаунт.
+func (s *Service) UpdateBankAccount(ctx context.Context, bankAccount *domain.BankAccount) error {
+	// Обновляем время изменения
+	bankAccount.UpdatedAt = time.Now()
+
+	// Передаем обновленную модель банковского аккаунта в репозиторий
+	return s.repo.UpdateBankAccount(ctx, bankAccount)
 }

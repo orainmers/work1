@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/krisch/crm-backend/domain" // Импортируй пакет с доменной моделью
+	"github.com/krisch/crm-backend/domain" // Импортируем пакет с доменной моделью
 	"gorm.io/gorm"
 )
 
-// Repository предоставляет методы для работы с сущностями LegalEntity в БД.
+// Repository предоставляет методы для работы с сущностями LegalEntity и BankAccount в БД.
 type Repository struct {
 	db *gorm.DB
 }
@@ -68,4 +68,52 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 		return gorm.ErrRecordNotFound
 	}
 	return nil
+}
+
+// GetAllBankAccounts возвращает все банковские аккаунты, связанные с конкретным юридическим лицом.
+func (r *Repository) GetAllBankAccounts(ctx context.Context, legalEntityUUID uuid.UUID) ([]domain.BankAccount, error) {
+	var bankAccounts []domain.BankAccount
+	err := r.db.WithContext(ctx).
+		Where("legal_entity_uuid = ? AND deleted_at IS NULL", legalEntityUUID).
+		Find(&bankAccounts).Error
+	return bankAccounts, err
+}
+
+// CreateBankAccount добавляет новый банковский аккаунт для юридического лица.
+func (r *Repository) CreateBankAccount(ctx context.Context, bankAccount *domain.BankAccount) error {
+	return r.db.WithContext(ctx).Create(bankAccount).Error
+}
+
+// DeleteBankAccount помечает банковский аккаунт как удалённый (soft delete), устанавливая deleted_at.
+func (r *Repository) DeleteBankAccount(ctx context.Context, bankAccountUUID uuid.UUID) error {
+	now := time.Now()
+	result := r.db.WithContext(ctx).
+		Model(&domain.BankAccount{}).
+		Where("uuid = ?", bankAccountUUID).
+		Where("deleted_at IS NULL").
+		Update("deleted_at", &now)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+// UpdateBankAccount обновляет банковский аккаунт.
+func (r *Repository) UpdateBankAccount(ctx context.Context, bankAccount *domain.BankAccount) error {
+	return r.db.WithContext(ctx).
+		Model(&domain.BankAccount{}).        // Указываем модель
+		Where("uuid = ?", bankAccount.UUID). // Условие для поиска по UUID
+		Updates(map[string]interface{}{
+			"bic":                   bankAccount.BIC,
+			"bank_name":             bankAccount.BankName,
+			"address":               bankAccount.Address,
+			"correspondent_account": bankAccount.CorrespondentAccount,
+			"account_number":        bankAccount.AccountNumber,
+			"currency":              bankAccount.Currency,
+			"comment":               bankAccount.Comment,
+			"updated_at":            bankAccount.UpdatedAt,
+		}).Error
 }
