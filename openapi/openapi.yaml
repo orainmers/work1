@@ -94,6 +94,82 @@ paths:
               schema:
                 $ref: '#/components/schemas/LegalEntityDTO'
 
+  /legal-entities/{uuid}/bank-accounts:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - federation
+      summary: Get all bank accounts for a legal entity
+      operationId: getAllBankAccounts
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BankAccountDTO'
+    post:
+      tags:
+        - federation
+      summary: Create a new bank account for a legal entity
+      operationId: createBankAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBankAccountRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankAccountDTO'
+
+  /bank-accounts/{uuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags:
+        - federation
+      summary: Update a bank account
+      operationId: updateBankAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBankAccountRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankAccountDTO'
+    delete:
+      tags:
+        - federation
+      summary: Delete a bank account
+      operationId: deleteBankAccount
+      responses:
+        '204':
+          description: No Content
+
   /about:
     get:
       tags:
@@ -3502,6 +3578,83 @@ components:
           type: string
       required:
         - name
+
+    BankAccountDTO:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        bic:
+          type: string
+        bank_name:
+          type: string
+        address:
+          type: string
+        correspondent_account:
+          type: string
+        account_number:
+          type: string
+        currency:
+          type: string
+        comment:
+          type: string
+        legal_entity_uuid:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+
+    CreateBankAccountRequest:
+      type: object
+      properties:
+        bic:
+          type: string
+        bank_name:
+          type: string
+        address:
+          type: string
+        correspondent_account:
+          type: string
+        account_number:
+          type: string
+        currency:
+          type: string
+        comment:
+          type: string
+      required:
+        - bic
+        - bank_name
+        - account_number
+
+    UpdateBankAccountRequest:
+      type: object
+      properties:
+        bic:
+          type: string
+        bank_name:
+          type: string
+        address:
+          type: string
+        correspondent_account:
+          type: string
+        account_number:
+          type: string
+        currency:
+          type: string
+        comment:
+          type: string
+      required:
+        - bic
+        - bank_name
+        - account_number
         
     NameRequest:
       type: object
