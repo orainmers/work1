@@ -86,7 +86,7 @@ func (a *Web) GetBankAccountsByLegalEntityUUID(ctx context.Context, request ofed
 	legalEntityUUID := request.LegalEntityUuid
 
 	// Получаем все банковские счета, принадлежащие этому юридическому лицу
-	bankAccounts, err := a.app.LegalEntitiesService.GetAllBankAccounts(ctx, legalEntityUUID)
+	bankAccounts, err := a.app.LegalEntitiesService.GetAllBankAccountsByLegalEntityUUID(ctx, legalEntityUUID)
 	if err != nil {
 		return nil, echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

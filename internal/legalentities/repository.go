@@ -131,3 +131,12 @@ func (r *Repository) UpdateBankAccount(ctx context.Context, bankAccount *domain.
 			"updated_at":            bankAccount.UpdatedAt,
 		}).Error
 }
+
+// GetAllBankAccountsByLegalEntityUUID получает все банковские счета для конкретного юридического лица.
+func (r *Repository) GetAllBankAccountsByLegalEntityUUID(ctx context.Context, legalEntityUUID uuid.UUID) ([]domain.BankAccount, error) {
+	var bankAccounts []domain.BankAccount
+	err := r.db.WithContext(ctx).
+		Where("legal_entity_uuid = ? AND deleted_at IS NULL", legalEntityUUID).
+		Find(&bankAccounts).Error
+	return bankAccounts, err
+}
