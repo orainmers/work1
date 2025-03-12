@@ -49,65 +49,52 @@ type Web struct {
 	BuildTime string
 }
 
-func (a *Web) CreateBankAccount(ctx context.Context, request ofederation.CreateBankAccountRequestObject) (ofederation.CreateBankAccountResponseObject, error) {
-	// Extracting the request body to access bank account details
-	body := request.Body
-
-	// Creating the BankAccount entity using the request data
-	bankAccount := &legalentities.BankAccount{
-		AccountNumber:        body.AccountNumber,
-		BankName:             body.BankName,
-		BIC:                  body.Bic,
-		Address:              *body.Address,
-		CorrespondentAccount: *body.CorrespondentAccount,
-		Currency:             *body.Currency,
-		Comment:              *body.Comment,
-		LegalEntityUUID:      request.Uuid, // Using the legal entity UUID from the request
-	}
-
-	domainBankAccount := bankAccount.ToDomain()
-
-	// Call the service layer to create the bank account
-	newID, err := a.app.LegalEntitiesService.CreateBankAccount(ctx, domainBankAccount)
-	if err != nil {
-		return nil, echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-
-	// Return the response
-	uuidValue := types.UUID(newID)
-	return &ofederation.CreateBankAccount201JSONResponse{
-		Uuid: &uuidValue,
-	}, nil
-}
-
-func (a *Web) DeleteBankAccount(ctx context.Context, request ofederation.DeleteBankAccountRequestObject) (ofederation.DeleteBankAccountResponseObject, error) {
-	// Get the bank account UUID from the path parameters
+// GetBankAccount implements ofederation.StrictServerInterface.
+func (a *Web) GetBankAccount(ctx context.Context, request ofederation.GetBankAccountRequestObject) (ofederation.GetBankAccountResponseObject, error) {
+	// Извлекаем UUID банковского счета из запроса
 	bankAccountUUID := request.Uuid
 
-	// Call the service layer to delete the bank account
-	err := a.app.LegalEntitiesService.DeleteBankAccount(ctx, bankAccountUUID)
+	// Получаем банковский счет из сервисного слоя
+	bankAccount, err := a.app.LegalEntitiesService.GetBankAccountByUUID(ctx, bankAccountUUID)
 	if err != nil {
-		return nil, echo.NewHTTPError(http.StatusNotFound, err.Error())
+		return nil, echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("Bank account with UUID %s not found", bankAccountUUID))
 	}
 
-	return &ofederation.DeleteBankAccount204Response{}, nil
+	// Маппинг в DTO
+	bankAccountDTO := ofederation.BankAccountDTO{
+		AccountNumber:        &bankAccount.AccountNumber,
+		Address:              &bankAccount.Address,
+		BankName:             &bankAccount.BankName,
+		Bic:                  &bankAccount.BIC,
+		Comment:              &bankAccount.Comment,
+		CorrespondentAccount: &bankAccount.CorrespondentAccount,
+		Currency:             &bankAccount.Currency,
+		CreatedAt:            &bankAccount.CreatedAt,
+		DeletedAt:            bankAccount.DeletedAt,
+		LegalEntityUuid:      &bankAccount.LegalEntityUUID,
+		UpdatedAt:            &bankAccount.UpdatedAt,
+		Uuid:                 &bankAccount.UUID,
+	}
+
+	// Возвращаем ответ
+	return ofederation.GetBankAccount200JSONResponse(bankAccountDTO), nil
 }
 
-// GetAllBankAccounts implements ofederation.StrictServerInterface.
-func (a *Web) GetAllBankAccounts(ctx context.Context, request ofederation.GetAllBankAccountsRequestObject) (ofederation.GetAllBankAccountsResponseObject, error) {
-	// Extract the legal entity UUID
-	legalEntityUUID := request.Uuid
+// GetBankAccountsByLegalEntityUUID implements ofederation.StrictServerInterface.
+func (a *Web) GetBankAccountsByLegalEntityUUID(ctx context.Context, request ofederation.GetBankAccountsByLegalEntityUUIDRequestObject) (ofederation.GetBankAccountsByLegalEntityUUIDResponseObject, error) {
+	// Извлекаем UUID юридического лица
+	legalEntityUUID := request.LegalEntityUuid
 
-	// Get all bank accounts for the legal entity from the service layer
+	// Получаем все банковские счета, принадлежащие этому юридическому лицу
 	bankAccounts, err := a.app.LegalEntitiesService.GetAllBankAccounts(ctx, legalEntityUUID)
 	if err != nil {
 		return nil, echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	// Map the bank accounts to DTOs
-	dtos := make([]ofederation.BankAccountDTO, 0, len(bankAccounts))
-	for _, bankAccount := range bankAccounts {
-		dtos = append(dtos, ofederation.BankAccountDTO{
+	// Маппинг банковских счетов в DTOs
+	dtos := make([]ofederation.BankAccountDTO, len(bankAccounts))
+	for i, bankAccount := range bankAccounts {
+		dtos[i] = ofederation.BankAccountDTO{
 			AccountNumber:        &bankAccount.AccountNumber,
 			Address:              &bankAccount.Address,
 			BankName:             &bankAccount.BankName,
@@ -120,23 +107,104 @@ func (a *Web) GetAllBankAccounts(ctx context.Context, request ofederation.GetAll
 			LegalEntityUuid:      &bankAccount.LegalEntityUUID,
 			UpdatedAt:            &bankAccount.UpdatedAt,
 			Uuid:                 &bankAccount.UUID,
-		})
+		}
 	}
 
-	// Create the response object that implements GetAllBankAccountsResponseObject
-	response := ofederation.GetAllBankAccounts200JSONResponse(dtos)
-
-	// Return the response
-	return response, nil
+	// Возвращаем ответ
+	return ofederation.GetBankAccountsByLegalEntityUUID200JSONResponse(dtos), nil
 }
 
-func (a *Web) UpdateBankAccount(ctx context.Context, request ofederation.UpdateBankAccountRequestObject) (ofederation.UpdateBankAccountResponseObject, error) {
-	// Extract the request body to get the updated bank account details
+// CreateBankAccount implements ofederation.StrictServerInterface.
+func (a *Web) CreateBankAccount(ctx context.Context, request ofederation.CreateBankAccountRequestObject) (ofederation.CreateBankAccountResponseObject, error) {
+	// Извлекаем UUID юридического лица
+	legalEntityUUID := request.LegalEntityUuid
+
+	// Извлекаем тело запроса
 	body := request.Body
 
-	// Creating the BankAccount entity using the updated request data
+	// Создаем банковский аккаунт
 	bankAccount := &legalentities.BankAccount{
-		UUID:                 request.Uuid,
+		AccountNumber:        body.AccountNumber,
+		BankName:             body.BankName,
+		BIC:                  body.Bic,
+		Address:              *body.Address,
+		CorrespondentAccount: *body.CorrespondentAccount,
+		Currency:             *body.Currency,
+		Comment:              *body.Comment,
+		LegalEntityUUID:      legalEntityUUID,
+	}
+
+	domainBankAccount := bankAccount.ToDomain()
+
+	// Вызываем сервис для создания банковского аккаунта
+	newID, err := a.app.LegalEntitiesService.CreateBankAccount(ctx, domainBankAccount)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	// Возвращаем UUID созданного банковского аккаунта
+	uuidValue := types.UUID(newID)
+	return ofederation.CreateBankAccount201JSONResponse{
+		Uuid: &uuidValue,
+	}, nil
+}
+
+// DeleteBankAccount implements ofederation.StrictServerInterface.
+func (a *Web) DeleteBankAccount(ctx context.Context, request ofederation.DeleteBankAccountRequestObject) (ofederation.DeleteBankAccountResponseObject, error) {
+	// Извлекаем UUID банковского счета
+	bankAccountUUID := request.Uuid
+
+	// Удаляем банковский счет через сервисный слой
+	err := a.app.LegalEntitiesService.DeleteBankAccount(ctx, bankAccountUUID)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusNotFound, err.Error())
+	}
+
+	return ofederation.DeleteBankAccount204Response{}, nil
+}
+
+// GetAllBankAccounts implements ofederation.StrictServerInterface.
+func (a *Web) GetAllBankAccounts(ctx context.Context, request ofederation.GetAllBankAccountsRequestObject) (ofederation.GetAllBankAccountsResponseObject, error) {
+	// Получаем все банковские счета без фильтрации по юр. лицу
+	bankAccounts, err := a.app.LegalEntitiesService.GetAllBankAccounts(ctx, uuid.Nil)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	// Преобразуем банковские счета в DTO
+	dtos := make([]ofederation.BankAccountDTO, len(bankAccounts))
+	for i, bankAccount := range bankAccounts {
+		dtos[i] = ofederation.BankAccountDTO{
+			AccountNumber:        &bankAccount.AccountNumber,
+			Address:              &bankAccount.Address,
+			BankName:             &bankAccount.BankName,
+			Bic:                  &bankAccount.BIC,
+			Comment:              &bankAccount.Comment,
+			CorrespondentAccount: &bankAccount.CorrespondentAccount,
+			Currency:             &bankAccount.Currency,
+			CreatedAt:            &bankAccount.CreatedAt,
+			DeletedAt:            bankAccount.DeletedAt,
+			LegalEntityUuid:      &bankAccount.LegalEntityUUID,
+			UpdatedAt:            &bankAccount.UpdatedAt,
+			Uuid:                 &bankAccount.UUID,
+		}
+	}
+
+	// Возвращаем ответ
+	return ofederation.GetAllBankAccounts200JSONResponse(dtos), nil
+}
+
+// UpdateBankAccount implements ofederation.StrictServerInterface.
+func (a *Web) UpdateBankAccount(ctx context.Context, request ofederation.UpdateBankAccountRequestObject) (ofederation.UpdateBankAccountResponseObject, error) {
+	// Извлекаем UUID банковского счета
+	bankAccountUUID := request.Uuid
+
+	// Извлекаем тело запроса
+	body := request.Body
+
+	// Обновляем банковский аккаунт
+	bankAccount := &legalentities.BankAccount{
+		UUID:                 bankAccountUUID,
 		AccountNumber:        body.AccountNumber,
 		BankName:             body.BankName,
 		BIC:                  body.Bic,
@@ -148,15 +216,15 @@ func (a *Web) UpdateBankAccount(ctx context.Context, request ofederation.UpdateB
 
 	domainBankAccount := bankAccount.ToDomain()
 
-	// Call the service layer to update the bank account
+	// Вызываем сервисный слой для обновления
 	err := a.app.LegalEntitiesService.UpdateBankAccount(ctx, domainBankAccount)
 	if err != nil {
 		return nil, echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
-	// Return the updated bank account DTO
-	return &ofederation.UpdateBankAccount200JSONResponse{
-		Uuid: &request.Uuid,
+	// Возвращаем обновленный UUID
+	return ofederation.UpdateBankAccount200JSONResponse{
+		Uuid: &bankAccountUUID,
 	}, nil
 }
 

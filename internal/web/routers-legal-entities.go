@@ -11,7 +11,7 @@ import (
 
 // RegisterLegalEntitiesRoutes регистрирует CRUD-эндпоинты для LegalEntities и BankAccounts.
 func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
-	// GET /legal-entities
+	// GET /legal-entities - Получение всех юридических лиц
 	e.GET("/legal-entities", func(c echo.Context) error {
 		entities, err := service.GetAllLegalEntities(c.Request().Context())
 		if err != nil {
@@ -22,7 +22,7 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 		return c.JSON(http.StatusOK, entities)
 	})
 
-	// POST /legal-entities
+	// POST /legal-entities - Создание нового юридического лица
 	e.POST("/legal-entities", func(c echo.Context) error {
 		var req struct {
 			Name string `json:"name" validate:"required"`
@@ -45,7 +45,7 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 		})
 	})
 
-	// PUT /legal-entities/:uuid
+	// PUT /legal-entities/:uuid - Обновление юр. лица
 	e.PUT("/legal-entities/:uuid", func(c echo.Context) error {
 		strID := c.Param("uuid")
 		id, err := uuid.Parse(strID)
@@ -73,7 +73,7 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 		return c.NoContent(http.StatusOK)
 	})
 
-	// DELETE /legal-entities/:uuid
+	// DELETE /legal-entities/:uuid - Удаление юр. лица
 	e.DELETE("/legal-entities/:uuid", func(c echo.Context) error {
 		strID := c.Param("uuid")
 		id, err := uuid.Parse(strID)
@@ -92,29 +92,61 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 		return c.NoContent(http.StatusNoContent)
 	})
 
-	// GET /legal-entities/{uuid}/bank-accounts
-	e.GET("/legal-entities/:uuid/bank-accounts", func(c echo.Context) error {
-		strID := c.Param("uuid")
-		id, err := uuid.Parse(strID)
+	// --- БАНКОВСКИЕ СЧЕТА ---
+
+	// GET /bank-accounts - Получение всех банковских счетов
+	e.GET("/bank-accounts", func(c echo.Context) error {
+		bankAccounts, err := service.GetAllBankAccounts(c.Request().Context(), uuid.Nil)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+		return c.JSON(http.StatusOK, bankAccounts)
+	})
+
+	// GET /bank-accounts/:legal_entity_uuid - Получение всех банковских счетов юр. лица
+	e.GET("/bank-accounts/:legal_entity_uuid", func(c echo.Context) error {
+		strID := c.Param("legal_entity_uuid")
+		legalEntityUUID, err := uuid.Parse(strID)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]interface{}{
 				"error": "invalid uuid",
 			})
 		}
 
-		bankAccounts, err := service.GetAllBankAccounts(c.Request().Context(), id)
+		bankAccounts, err := service.GetAllBankAccounts(c.Request().Context(), legalEntityUUID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 				"error": err.Error(),
 			})
 		}
-
 		return c.JSON(http.StatusOK, bankAccounts)
 	})
 
-	// POST /legal-entities/{uuid}/bank-accounts
-	e.POST("/legal-entities/:uuid/bank-accounts", func(c echo.Context) error {
+	// GET /bank-accounts/:uuid - Получение одного банковского счета
+	e.GET("/bank-accounts/:uuid", func(c echo.Context) error {
 		strID := c.Param("uuid")
+		bankAccountUUID, err := uuid.Parse(strID)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"error": "invalid uuid",
+			})
+		}
+
+		bankAccount, err := service.GetBankAccountByUUID(c.Request().Context(), bankAccountUUID)
+		if err != nil {
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, bankAccount)
+	})
+
+	// POST /bank-accounts/:legal_entity_uuid - Создание банковского счета
+	e.POST("/bank-accounts/:legal_entity_uuid", func(c echo.Context) error {
+		strID := c.Param("legal_entity_uuid")
 		legalEntityUUID, err := uuid.Parse(strID)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]interface{}{
@@ -148,10 +180,7 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 			LegalEntityUUID:      legalEntityUUID,
 		}
 
-		// Преобразуем в доменную модель
-		domainBankAccount := bankAccount.ToDomain()
-
-		newID, err := service.CreateBankAccount(c.Request().Context(), domainBankAccount)
+		newID, err := service.CreateBankAccount(c.Request().Context(), bankAccount.ToDomain())
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 				"error": err.Error(),

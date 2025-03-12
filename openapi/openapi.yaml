@@ -94,18 +94,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/LegalEntityDTO'
 
-  /legal-entities/{uuid}/bank-accounts:
-    parameters:
-      - name: uuid
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+  /bank-accounts:
     get:
       tags:
         - federation
-      summary: Get all bank accounts for a legal entity
+      summary: Get all bank accounts
       operationId: getAllBankAccounts
       responses:
         '200':
@@ -116,11 +109,42 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/BankAccountDTO'
+
+  /bank-accounts/{legal_entity_uuid}:
+    get:
+      tags:
+        - federation
+      summary: Get all bank accounts for a specific legal entity
+      operationId: getBankAccountsByLegalEntityUUID
+      parameters:
+        - name: legal_entity_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BankAccountDTO'
+
     post:
       tags:
         - federation
       summary: Create a new bank account for a legal entity
       operationId: createBankAccount
+      parameters:
+        - name: legal_entity_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -136,18 +160,38 @@ paths:
                 $ref: '#/components/schemas/BankAccountDTO'
 
   /bank-accounts/{uuid}:
-    parameters:
-      - name: uuid
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+    get:
+      tags:
+        - federation
+      summary: Get a bank account by its UUID
+      operationId: getBankAccount
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankAccountDTO'
+
     put:
       tags:
         - federation
       summary: Update a bank account
       operationId: updateBankAccount
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -161,11 +205,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BankAccountDTO'
+
     delete:
       tags:
         - federation
       summary: Delete a bank account
       operationId: deleteBankAccount
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '204':
           description: No Content

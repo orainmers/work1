@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/krisch/crm-backend/domain" // Импортируем пакет с доменной моделью
+	"github.com/krisch/crm-backend/domain"
 	"gorm.io/gorm"
 )
 
-// Repository предоставляет методы для работы с сущностями LegalEntity и BankAccount в БД.
+// Repository предоставляет методы для работы с LegalEntity и BankAccount в БД.
 type Repository struct {
 	db *gorm.DB
 }
@@ -45,8 +45,8 @@ func (r *Repository) GetAll(ctx context.Context) ([]domain.LegalEntity, error) {
 // Update обновляет существующую запись LegalEntity.
 func (r *Repository) Update(ctx context.Context, entity *domain.LegalEntity) error {
 	return r.db.WithContext(ctx).
-		Model(&domain.LegalEntity{}).   // Указываем модель
-		Where("uuid = ?", entity.UUID). // Условие для поиска по UUID
+		Model(&domain.LegalEntity{}).
+		Where("uuid = ?", entity.UUID).
 		Updates(map[string]interface{}{
 			"name":       entity.Name,
 			"updated_at": entity.UpdatedAt,
@@ -70,13 +70,27 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// GetAllBankAccounts возвращает все банковские аккаунты, связанные с конкретным юридическим лицом.
+// GetAllBankAccounts возвращает банковские счета.
+// Если передан legalEntityUUID == uuid.Nil, возвращает все счета без фильтрации.
 func (r *Repository) GetAllBankAccounts(ctx context.Context, legalEntityUUID uuid.UUID) ([]domain.BankAccount, error) {
 	var bankAccounts []domain.BankAccount
-	err := r.db.WithContext(ctx).
-		Where("legal_entity_uuid = ? AND deleted_at IS NULL", legalEntityUUID).
-		Find(&bankAccounts).Error
+	query := r.db.WithContext(ctx).Where("deleted_at IS NULL")
+
+	if legalEntityUUID != uuid.Nil {
+		query = query.Where("legal_entity_uuid = ?", legalEntityUUID)
+	}
+
+	err := query.Find(&bankAccounts).Error
 	return bankAccounts, err
+}
+
+// GetBankAccountByUUID возвращает один банковский счет по его UUID.
+func (r *Repository) GetBankAccountByUUID(ctx context.Context, bankAccountUUID uuid.UUID) (domain.BankAccount, error) {
+	var bankAccount domain.BankAccount
+	err := r.db.WithContext(ctx).
+		Where("uuid = ? AND deleted_at IS NULL", bankAccountUUID).
+		First(&bankAccount).Error
+	return bankAccount, err
 }
 
 // CreateBankAccount добавляет новый банковский аккаунт для юридического лица.
@@ -104,8 +118,8 @@ func (r *Repository) DeleteBankAccount(ctx context.Context, bankAccountUUID uuid
 // UpdateBankAccount обновляет банковский аккаунт.
 func (r *Repository) UpdateBankAccount(ctx context.Context, bankAccount *domain.BankAccount) error {
 	return r.db.WithContext(ctx).
-		Model(&domain.BankAccount{}).        // Указываем модель
-		Where("uuid = ?", bankAccount.UUID). // Условие для поиска по UUID
+		Model(&domain.BankAccount{}).
+		Where("uuid = ?", bankAccount.UUID).
 		Updates(map[string]interface{}{
 			"bic":                   bankAccount.BIC,
 			"bank_name":             bankAccount.BankName,
