@@ -93,3 +93,8 @@ func (s *Service) UpdateBankAccount(ctx context.Context, bankAccount *domain.Ban
 	bankAccount.UpdatedAt = time.Now()
 	return s.repo.UpdateBankAccount(ctx, bankAccount)
 }
+
+// GetAllBankAccountsByLegalEntityUUID возвращает банковские счета для конкретного юридического лица.
+func (s *Service) GetAllBankAccountsByLegalEntityUUID(ctx context.Context, legalEntityUUID uuid.UUID) ([]domain.BankAccount, error) {
+	return s.repo.GetAllBankAccountsByLegalEntityUUID(ctx, legalEntityUUID)
+}
