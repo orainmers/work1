@@ -105,17 +105,18 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 		return c.JSON(http.StatusOK, bankAccounts)
 	})
 
-	// GET /bank-accounts/:legal_entity_uuid - Получение всех банковских счетов юр. лица
-	e.GET("/bank-accounts/:legal_entity_uuid", func(c echo.Context) error {
-		strID := c.Param("legal_entity_uuid")
-		legalEntityUUID, err := uuid.Parse(strID)
-		if err != nil {
+	// GET /bank-accounts - Получение всех банковских счетов для юр. лица
+	e.GET("/bank-accounts", func(c echo.Context) error {
+		var req struct {
+			LegalEntityUuid uuid.UUID `json:"legal_entity_uuid" validate:"required"`
+		}
+		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]interface{}{
-				"error": "invalid uuid",
+				"error": err.Error(),
 			})
 		}
 
-		bankAccounts, err := service.GetAllBankAccounts(c.Request().Context(), legalEntityUUID)
+		bankAccounts, err := service.GetAllBankAccounts(c.Request().Context(), req.LegalEntityUuid)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 				"error": err.Error(),
@@ -144,24 +145,17 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 		return c.JSON(http.StatusOK, bankAccount)
 	})
 
-	// POST /bank-accounts/:legal_entity_uuid - Создание банковского счета
-	e.POST("/bank-accounts/:legal_entity_uuid", func(c echo.Context) error {
-		strID := c.Param("legal_entity_uuid")
-		legalEntityUUID, err := uuid.Parse(strID)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]interface{}{
-				"error": "invalid uuid",
-			})
-		}
-
+	// POST /bank-accounts - Создание банковского счета
+	e.POST("/bank-accounts", func(c echo.Context) error {
 		var req struct {
-			BIC           string `json:"bic" validate:"required"`
-			BankName      string `json:"bank_name" validate:"required"`
-			Address       string `json:"address"`
-			CorrAccount   string `json:"correspondent_account"`
-			AccountNumber string `json:"account_number" validate:"required"`
-			Currency      string `json:"currency"`
-			Comment       string `json:"comment"`
+			LegalEntityUuid uuid.UUID `json:"legal_entity_uuid" validate:"required"`
+			BIC             string    `json:"bic" validate:"required"`
+			BankName        string    `json:"bank_name" validate:"required"`
+			Address         string    `json:"address"`
+			CorrAccount     string    `json:"correspondent_account"`
+			AccountNumber   string    `json:"account_number" validate:"required"`
+			Currency        string    `json:"currency"`
+			Comment         string    `json:"comment"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]interface{}{
@@ -177,7 +171,7 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 			AccountNumber:        req.AccountNumber,
 			Currency:             req.Currency,
 			Comment:              req.Comment,
-			LegalEntityUUID:      legalEntityUUID,
+			LegalEntityUUID:      req.LegalEntityUuid,
 		}
 
 		newID, err := service.CreateBankAccount(c.Request().Context(), bankAccount.ToDomain())
@@ -192,7 +186,7 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 		})
 	})
 
-	// PUT /bank-accounts/{uuid}
+	// PUT /bank-accounts/:uuid - Обновление банковского счета
 	e.PUT("/bank-accounts/:uuid", func(c echo.Context) error {
 		strID := c.Param("uuid")
 		bankAccountUUID, err := uuid.Parse(strID)
@@ -228,7 +222,6 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 			Comment:              req.Comment,
 		}
 
-		// Преобразуем в доменную модель
 		domainBankAccount := bankAccount.ToDomain()
 
 		if err := service.UpdateBankAccount(c.Request().Context(), domainBankAccount); err != nil {
@@ -237,10 +230,10 @@ func RegisterLegalEntitiesRoutes(e *echo.Echo, service *legalentities.Service) {
 			})
 		}
 
-		return c.NoContent(http.StatusOK)
+		return c.JSON(http.StatusOK, bankAccount)
 	})
 
-	// DELETE /bank-accounts/{uuid}
+	// DELETE /bank-accounts/:uuid - Удаление банковского счета
 	e.DELETE("/bank-accounts/:uuid", func(c echo.Context) error {
 		strID := c.Param("uuid")
 		bankAccountUUID, err := uuid.Parse(strID)

@@ -86,17 +86,6 @@ type CompanyPriorityCreateRequest struct {
 // CompanyPriorityDTO defines model for CompanyPriorityDTO.
 type CompanyPriorityDTO = dto.CompanyPriorityDTO
 
-// CreateBankAccountRequest defines model for CreateBankAccountRequest.
-type CreateBankAccountRequest struct {
-	AccountNumber        string  `json:"account_number"`
-	Address              *string `json:"address,omitempty"`
-	BankName             string  `json:"bank_name"`
-	Bic                  string  `json:"bic"`
-	Comment              *string `json:"comment,omitempty"`
-	CorrespondentAccount *string `json:"correspondent_account,omitempty"`
-	Currency             *string `json:"currency,omitempty"`
-}
-
 // CreateLegalEntityRequest defines model for CreateLegalEntityRequest.
 type CreateLegalEntityRequest struct {
 	Name string `json:"name"`
@@ -303,6 +292,20 @@ type UserUUID = openapi_types.UUID
 // Uuid defines model for uuid.
 type Uuid = openapi_types.UUID
 
+// CreateBankAccountJSONBody defines parameters for CreateBankAccount.
+type CreateBankAccountJSONBody struct {
+	AccountNumber        *string `json:"account_number,omitempty"`
+	Address              *string `json:"address,omitempty"`
+	BankName             *string `json:"bank_name,omitempty"`
+	Bic                  *string `json:"bic,omitempty"`
+	Comment              *string `json:"comment,omitempty"`
+	CorrespondentAccount *string `json:"correspondent_account,omitempty"`
+	Currency             *string `json:"currency,omitempty"`
+
+	// LegalEntityUuid UUID of the legal entity the bank account belongs to
+	LegalEntityUuid *openapi_types.UUID `json:"legal_entity_uuid,omitempty"`
+}
+
 // PatchCompanyUUIDPrioritiesEntityUUIDJSONBody defines parameters for PatchCompanyUUIDPrioritiesEntityUUID.
 type PatchCompanyUUIDPrioritiesEntityUUIDJSONBody struct {
 	Color string `json:"color" validate:"color"`
@@ -403,7 +406,7 @@ type PatchTagUUIDJSONBody struct {
 }
 
 // CreateBankAccountJSONRequestBody defines body for CreateBankAccount for application/json ContentType.
-type CreateBankAccountJSONRequestBody = CreateBankAccountRequest
+type CreateBankAccountJSONRequestBody CreateBankAccountJSONBody
 
 // UpdateBankAccountJSONRequestBody defines body for UpdateBankAccount for application/json ContentType.
 type UpdateBankAccountJSONRequestBody = UpdateBankAccountRequest
@@ -527,12 +530,9 @@ type ServerInterface interface {
 	// Get all bank accounts
 	// (GET /bank-accounts)
 	GetAllBankAccounts(ctx echo.Context) error
-	// Get all bank accounts for a specific legal entity
-	// (GET /bank-accounts/{legal_entity_uuid})
-	GetBankAccountsByLegalEntityUUID(ctx echo.Context, legalEntityUuid openapi_types.UUID) error
 	// Create a new bank account for a legal entity
-	// (POST /bank-accounts/{legal_entity_uuid})
-	CreateBankAccount(ctx echo.Context, legalEntityUuid openapi_types.UUID) error
+	// (POST /bank-accounts)
+	CreateBankAccount(ctx echo.Context) error
 	// Delete a bank account
 	// (DELETE /bank-accounts/{uuid})
 	DeleteBankAccount(ctx echo.Context, uuid openapi_types.UUID) error
@@ -785,39 +785,14 @@ func (w *ServerInterfaceWrapper) GetAllBankAccounts(ctx echo.Context) error {
 	return err
 }
 
-// GetBankAccountsByLegalEntityUUID converts echo context to params.
-func (w *ServerInterfaceWrapper) GetBankAccountsByLegalEntityUUID(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "legal_entity_uuid" -------------
-	var legalEntityUuid openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "legal_entity_uuid", runtime.ParamLocationPath, ctx.Param("legal_entity_uuid"), &legalEntityUuid)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter legal_entity_uuid: %s", err))
-	}
-
-	ctx.Set(BearerAuthScopes, []string{})
-
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetBankAccountsByLegalEntityUUID(ctx, legalEntityUuid)
-	return err
-}
-
 // CreateBankAccount converts echo context to params.
 func (w *ServerInterfaceWrapper) CreateBankAccount(ctx echo.Context) error {
 	var err error
-	// ------------- Path parameter "legal_entity_uuid" -------------
-	var legalEntityUuid openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithLocation("simple", false, "legal_entity_uuid", runtime.ParamLocationPath, ctx.Param("legal_entity_uuid"), &legalEntityUuid)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter legal_entity_uuid: %s", err))
-	}
 
 	ctx.Set(BearerAuthScopes, []string{})
 
 	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.CreateBankAccount(ctx, legalEntityUuid)
+	err = w.Handler.CreateBankAccount(ctx)
 	return err
 }
 
@@ -2427,8 +2402,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	}
 
 	router.GET(baseURL+"/bank-accounts", wrapper.GetAllBankAccounts)
-	router.GET(baseURL+"/bank-accounts/:legal_entity_uuid", wrapper.GetBankAccountsByLegalEntityUUID)
-	router.POST(baseURL+"/bank-accounts/:legal_entity_uuid", wrapper.CreateBankAccount)
+	router.POST(baseURL+"/bank-accounts", wrapper.CreateBankAccount)
 	router.DELETE(baseURL+"/bank-accounts/:uuid", wrapper.DeleteBankAccount)
 	router.GET(baseURL+"/bank-accounts/:uuid", wrapper.GetBankAccount)
 	router.PUT(baseURL+"/bank-accounts/:uuid", wrapper.UpdateBankAccount)
@@ -2526,26 +2500,8 @@ func (response GetAllBankAccounts200JSONResponse) VisitGetAllBankAccountsRespons
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetBankAccountsByLegalEntityUUIDRequestObject struct {
-	LegalEntityUuid openapi_types.UUID `json:"legal_entity_uuid"`
-}
-
-type GetBankAccountsByLegalEntityUUIDResponseObject interface {
-	VisitGetBankAccountsByLegalEntityUUIDResponse(w http.ResponseWriter) error
-}
-
-type GetBankAccountsByLegalEntityUUID200JSONResponse []BankAccountDTO
-
-func (response GetBankAccountsByLegalEntityUUID200JSONResponse) VisitGetBankAccountsByLegalEntityUUIDResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type CreateBankAccountRequestObject struct {
-	LegalEntityUuid openapi_types.UUID `json:"legal_entity_uuid"`
-	Body            *CreateBankAccountJSONRequestBody
+	Body *CreateBankAccountJSONRequestBody
 }
 
 type CreateBankAccountResponseObject interface {
@@ -3980,11 +3936,8 @@ type StrictServerInterface interface {
 	// Get all bank accounts
 	// (GET /bank-accounts)
 	GetAllBankAccounts(ctx context.Context, request GetAllBankAccountsRequestObject) (GetAllBankAccountsResponseObject, error)
-	// Get all bank accounts for a specific legal entity
-	// (GET /bank-accounts/{legal_entity_uuid})
-	GetBankAccountsByLegalEntityUUID(ctx context.Context, request GetBankAccountsByLegalEntityUUIDRequestObject) (GetBankAccountsByLegalEntityUUIDResponseObject, error)
 	// Create a new bank account for a legal entity
-	// (POST /bank-accounts/{legal_entity_uuid})
+	// (POST /bank-accounts)
 	CreateBankAccount(ctx context.Context, request CreateBankAccountRequestObject) (CreateBankAccountResponseObject, error)
 	// Delete a bank account
 	// (DELETE /bank-accounts/{uuid})
@@ -4257,36 +4210,9 @@ func (sh *strictHandler) GetAllBankAccounts(ctx echo.Context) error {
 	return nil
 }
 
-// GetBankAccountsByLegalEntityUUID operation middleware
-func (sh *strictHandler) GetBankAccountsByLegalEntityUUID(ctx echo.Context, legalEntityUuid openapi_types.UUID) error {
-	var request GetBankAccountsByLegalEntityUUIDRequestObject
-
-	request.LegalEntityUuid = legalEntityUuid
-
-	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.GetBankAccountsByLegalEntityUUID(ctx.Request().Context(), request.(GetBankAccountsByLegalEntityUUIDRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetBankAccountsByLegalEntityUUID")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return err
-	} else if validResponse, ok := response.(GetBankAccountsByLegalEntityUUIDResponseObject); ok {
-		return validResponse.VisitGetBankAccountsByLegalEntityUUIDResponse(ctx.Response())
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
 // CreateBankAccount operation middleware
-func (sh *strictHandler) CreateBankAccount(ctx echo.Context, legalEntityUuid openapi_types.UUID) error {
+func (sh *strictHandler) CreateBankAccount(ctx echo.Context) error {
 	var request CreateBankAccountRequestObject
-
-	request.LegalEntityUuid = legalEntityUuid
 
 	var body CreateBankAccountJSONRequestBody
 	if err := ctx.Bind(&body); err != nil {
