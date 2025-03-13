@@ -110,47 +110,36 @@ paths:
                 items:
                   $ref: '#/components/schemas/BankAccountDTO'
 
-  /bank-accounts/{legal_entity_uuid}:
-    get:
-      tags:
-        - federation
-      summary: Get all bank accounts for a specific legal entity
-      operationId: getBankAccountsByLegalEntityUUID
-      parameters:
-        - name: legal_entity_uuid
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/BankAccountDTO'
-
     post:
       tags:
         - federation
       summary: Create a new bank account for a legal entity
       operationId: createBankAccount
-      parameters:
-        - name: legal_entity_uuid
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateBankAccountRequest'
+              type: object
+              properties:
+                legal_entity_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID of the legal entity the bank account belongs to
+                bic:
+                  type: string
+                bank_name:
+                  type: string
+                address:
+                  type: string
+                correspondent_account:
+                  type: string
+                account_number:
+                  type: string
+                currency:
+                  type: string
+                comment:
+                  type: string
       responses:
         '201':
           description: Created
@@ -179,7 +168,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BankAccountDTO'
-
     put:
       tags:
         - federation
@@ -205,7 +193,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BankAccountDTO'
-
     delete:
       tags:
         - federation
@@ -3667,6 +3654,10 @@ components:
     CreateBankAccountRequest:
       type: object
       properties:
+        legal_entity_uuid:
+          type: string
+          format: uuid
+          description: UUID of the legal entity the bank account belongs to
         bic:
           type: string
         bank_name:
@@ -3685,6 +3676,7 @@ components:
         - bic
         - bank_name
         - account_number
+        - legal_entity_uuid
 
     UpdateBankAccountRequest:
       type: object
